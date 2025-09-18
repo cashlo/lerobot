@@ -5,8 +5,8 @@
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
+#CINFO 2025-09-18 02:18:05 1_leader.py:156 so_101_leader_1 SO101Leader disconnected.
+# Unless required by applicable law or agreed to in writing, softwarewer disconnected.
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -97,10 +97,10 @@ class TeleoperateConfig:
     teleop_time_s: float | None = None
     # Display all cameras on screen
     display_data: bool = False
-
+    show_currents: bool = False
 
 def teleop_loop(
-    teleop: Teleoperator, robot: Robot, fps: int, display_data: bool = False, duration: float | None = None
+    teleop: Teleoperator, robot: Robot, fps: int, display_data: bool = False, show_currents: bool = False, duration: float | None = None
 ):
     display_len = max(len(key) for key in robot.action_features)
     start = time.perf_counter()
@@ -121,12 +121,22 @@ def teleop_loop(
         print(f"{'NAME':<{display_len}} | {'NORM':>7}")
         for motor, value in action.items():
             print(f"{motor:<{display_len}} | {value:>7.2f}")
+        
+        if show_currents:
+            print("\n" + "-" * (display_len + 10))
+            print(f"{'MOTOR':<{display_len}} | {'CURRENT':>7}")
+            motor_currents = robot.bus.sync_read("Present_Current")
+            for motor, current in motor_currents.items():
+                print(f"{motor:<{display_len}} | {current:>7}")
+
         print(f"\ntime: {loop_s * 1e3:.2f}ms ({1 / loop_s:.0f} Hz)")
 
         if duration is not None and time.perf_counter() - start >= duration:
             return
 
         move_cursor_up(len(action) + 5)
+        if show_currents:
+            move_cursor_up(len(action) + 3)
 
 
 @draccus.wrap()
@@ -143,7 +153,7 @@ def teleoperate(cfg: TeleoperateConfig):
     robot.connect()
 
     try:
-        teleop_loop(teleop, robot, cfg.fps, display_data=cfg.display_data, duration=cfg.teleop_time_s)
+        teleop_loop(teleop, robot, cfg.fps, display_data=cfg.display_data, show_currents=cfg.show_currents, duration=cfg.teleop_time_s)
     except KeyboardInterrupt:
         pass
     finally:
